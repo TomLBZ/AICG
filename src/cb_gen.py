@@ -289,7 +289,9 @@ class CodeModificationService:
         # This is a simplified implementation
         # A real implementation would handle merging more intelligently
         for section_name, section_content in relevant_sections.items():
+            # extract the modified section from the response
+            modified_section = self._extract_section(modified_response, section_name)
             # Replace the original section with the modified one
-            original_content = original_content.replace(section_content, modified_response)
-        
+            original_content = original_content.replace(section_content, modified_section)
+
         return original_content.strip()
