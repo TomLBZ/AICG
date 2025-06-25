@@ -14,17 +14,9 @@ service = CodeGenerationService(llm_interface=llm, validator=validator)
 codebase_reader = CodebaseReader(root_dir=CURRENT_DIR)
 code_modification_service = CodeModificationService(llm_interface=llm, codebase_reader=codebase_reader, validator=validator)
 
-async def generate_code(request: CodeGenerationRequest) -> CodeGenerationResult:
-    """Generate code from a specification."""
-    try:
-        result = await service.generate_code(request)
-        return result
-    except Exception as e:
-        raise RuntimeError(f"Code generation failed: {str(e)}")
-    
-async def print_code_generation(request: CodeGenerationRequest) -> str:
+async def test_code_generation(request: CodeGenerationRequest) -> str:
     """Print the generated code and validation results."""
-    result = await generate_code(request)
+    result = await service.generate_code(request)
     print("==== Generation ====")
     print(result.code)
     if result.validation_results:
@@ -34,17 +26,9 @@ async def print_code_generation(request: CodeGenerationRequest) -> str:
         print("No validation results available.")
     return result.code
 
-async def modify_codebase(fname: str, modification: str, language: LanguageEnum) -> CodeGenerationResult:
-    """Modify the codebase based on the generated code."""
-    try:
-        modification_result = await code_modification_service.generate_modification(language, fname, modification, True)
-        return modification_result
-    except Exception as e:
-        raise RuntimeError(f"Code modification failed: {str(e)}")
-    
-async def print_code_modification(fname: str, modification: str, language: LanguageEnum) -> str:
+async def test_code_modification(fname: str, modification: str, language: LanguageEnum) -> str:
     """Print the modifications made to the codebase."""
-    modifications = await modify_codebase(fname, modification, language)
+    modifications = await code_modification_service.generate_modification(language, fname, modification, True)
     print("==== Modification ====")
     print(modifications.code)
     if modifications.validation_results:
@@ -74,13 +58,13 @@ async def complete_test():
     mod_fname = "modified.py"
     modification = "rename variables a and b to x and y"
     print("[GENERATION] Starting...")
-    code = await print_code_generation(request)
+    code = await test_code_generation(request)
     # write the generated code to a file
     with open(gen_fname, "w") as f:
         f.write(code)
     print("[GENERATION] Completed. Code written to", gen_fname)
     print("[MODIFICATION] Starting...")
-    modified_code = await print_code_modification(gen_fname, modification, specification.language)
+    modified_code = await test_code_modification(gen_fname, modification, specification.language)
     # write the modified code to a file
     with open(mod_fname, "w") as f:
         f.write(modified_code)
