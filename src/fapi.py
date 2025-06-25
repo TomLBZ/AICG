@@ -3,9 +3,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 # Import our components
-from oai_cgen import OpenAICodeGenerator
-from svc import CodeGenerationService, CodeGenerationRequest, CodeGenerationResult
-from validate import CodeValidator
+from agcg import OpenAICodeGenerator, CodeGenerationService, CodeGenerationRequest, CodeGenerationResult, CodeValidator
 
 # Create the FastAPI app
 app = FastAPI(

@@ -1,9 +1,7 @@
 import asyncio
-from oai_cgen import OpenAICodeGenerator
-from svc import CodeGenerationService, CodeGenerationRequest, CodeGenerationResult
-from validate import CodeValidator
-from cb_gen import CodebaseReader, CodeModificationService
-import os
+from agcg import LanguageEnum, OpenAICodeGenerator, CodeGenerationService, \
+    CodeGenerationSpecification, CodeGenerationRequest, CodeGenerationResult, \
+    CodeValidator, CodebaseReader, CodeModificationService
 
 BASE_URL = "https://ai.stdev.remoteblossom.com/engines/v1"
 MODEL = "ai/phi4"
@@ -27,52 +25,59 @@ async def generate_code(request: CodeGenerationRequest) -> CodeGenerationResult:
 async def print_code_generation(request: CodeGenerationRequest) -> str:
     """Print the generated code and validation results."""
     result = await generate_code(request)
-    print("Generated Code:")
+    print("==== Generation ====\n")
     print(result.code)
     if result.validation_results:
-        print("Validation Results:")
-        for key, value in result.validation_results.items():
-            print(f"{key}: {value}")
+        print("==== Validation ====\n")
+        print(result.validation_results)
     else:
         print("No validation results available.")
     return result.code
-    
-async def modify_codebase(fname: str, modification: str) -> str:
+
+async def modify_codebase(fname: str, modification: str, language: LanguageEnum) -> str:
     """Modify the codebase based on the generated code."""
     try:
-        modifications = await code_modification_service.generate_modification(fname, modification, True)
+        modifications = await code_modification_service.generate_modification(language, fname, modification, True)
         print("Codebase modified successfully.")
         return modifications
     except Exception as e:
         raise RuntimeError(f"Code modification failed: {str(e)}")
     
-async def print_code_modification(fname: str, modification: str) -> str:
+async def print_code_modification(fname: str, modification: str, language: LanguageEnum) -> str:
     """Print the modifications made to the codebase."""
-    modifications = await modify_codebase(fname, modification)
+    modifications = await modify_codebase(fname, modification, language)
     print("Modifications:")
     print(modifications)
     return modifications
 
 async def complete_test():
     """Run a complete test of code generation and modification."""
+    specification = CodeGenerationSpecification(
+        task_description="Create a function that adds two numbers",
+        language=LanguageEnum.PYTHON,
+        framework=None,
+        expected_inputs={"a": "int", "b": "int"},
+        expected_outputs={"result": "int"},
+        constraints=[]
+    )
     request = CodeGenerationRequest(
-        specification="Create a function that adds two numbers",
-        language="python",
+        specification=specification,
         examples=[],
         max_tokens=2000,
         temperature=0.2
     )
-    fname = "add.py"
-    modification = "rename variables to x and y"
+    gen_fname = "generated.py"
+    mod_fname = "modified.py"
+    modification = "rename variables a and b to x and y"
     print("Starting code generation...")
     code = await print_code_generation(request)
     # write the generated code to a file
-    with open(fname, "w") as f:
+    with open(gen_fname, "w") as f:
         f.write(code)
     print("Starting code modification...")
-    modified_code = await print_code_modification(fname, modification)
+    modified_code = await print_code_modification(gen_fname, modification, specification.language)
     # write the modified code to a file
-    with open(fname, "w") as f:
+    with open(mod_fname, "w") as f:
         f.write(modified_code)
 
 if __name__ == "__main__":
