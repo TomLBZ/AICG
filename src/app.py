@@ -12,7 +12,7 @@ llm = OpenAICodeGenerator(api_key=KEY, model=MODEL, base_url=BASE_URL)
 validator = CodeValidator()
 service = CodeGenerationService(llm_interface=llm, validator=validator)
 codebase_reader = CodebaseReader(root_dir=CURRENT_DIR)
-code_modification_service = CodeModificationService(llm_interface=llm, codebase_reader=codebase_reader)
+code_modification_service = CodeModificationService(llm_interface=llm, codebase_reader=codebase_reader, validator=validator)
 
 async def generate_code(request: CodeGenerationRequest) -> CodeGenerationResult:
     """Generate code from a specification."""
@@ -25,30 +25,34 @@ async def generate_code(request: CodeGenerationRequest) -> CodeGenerationResult:
 async def print_code_generation(request: CodeGenerationRequest) -> str:
     """Print the generated code and validation results."""
     result = await generate_code(request)
-    print("==== Generation ====\n")
+    print("==== Generation ====")
     print(result.code)
     if result.validation_results:
-        print("==== Validation ====\n")
+        print("==== Validation ====")
         print(result.validation_results)
     else:
         print("No validation results available.")
     return result.code
 
-async def modify_codebase(fname: str, modification: str, language: LanguageEnum) -> str:
+async def modify_codebase(fname: str, modification: str, language: LanguageEnum) -> CodeGenerationResult:
     """Modify the codebase based on the generated code."""
     try:
-        modifications = await code_modification_service.generate_modification(language, fname, modification, True)
-        print("Codebase modified successfully.")
-        return modifications
+        modification_result = await code_modification_service.generate_modification(language, fname, modification, True)
+        return modification_result
     except Exception as e:
         raise RuntimeError(f"Code modification failed: {str(e)}")
     
 async def print_code_modification(fname: str, modification: str, language: LanguageEnum) -> str:
     """Print the modifications made to the codebase."""
     modifications = await modify_codebase(fname, modification, language)
-    print("Modifications:")
-    print(modifications)
-    return modifications
+    print("==== Modification ====")
+    print(modifications.code)
+    if modifications.validation_results:
+        print("==== Validation ====")
+        print(modifications.validation_results)
+    else:
+        print("No validation results available.")
+    return modifications.code
 
 async def complete_test():
     """Run a complete test of code generation and modification."""
@@ -69,16 +73,18 @@ async def complete_test():
     gen_fname = "generated.py"
     mod_fname = "modified.py"
     modification = "rename variables a and b to x and y"
-    print("Starting code generation...")
+    print("[GENERATION] Starting...")
     code = await print_code_generation(request)
     # write the generated code to a file
     with open(gen_fname, "w") as f:
         f.write(code)
-    print("Starting code modification...")
+    print("[GENERATION] Completed. Code written to", gen_fname)
+    print("[MODIFICATION] Starting...")
     modified_code = await print_code_modification(gen_fname, modification, specification.language)
     # write the modified code to a file
     with open(mod_fname, "w") as f:
         f.write(modified_code)
+    print("[MODIFICATION] Completed. Modified code written to", mod_fname)
 
 if __name__ == "__main__":
     asyncio.run(complete_test())

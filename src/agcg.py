@@ -446,7 +446,7 @@ class CodebaseReader:
 class CodeModificationService:
     """Service for generating modifications to existing code."""
     
-    def __init__(self, llm_interface: LLMInterface, codebase_reader: CodebaseReader):
+    def __init__(self, llm_interface: LLMInterface, codebase_reader: CodebaseReader, validator: Optional[CodeValidator] = None):
         """Initialize with LLM interface and codebase reader.
         
         Args:
@@ -455,32 +455,29 @@ class CodeModificationService:
         """
         self.llm = llm_interface
         self.codebase = codebase_reader
-        
-    async def generate_modification(
-        self,
-        language: LanguageEnum,
-        target_file: str,
-        modification_instruction: str,
-        include_related_files: bool = True
-    ) -> str:
-        """Generate a modification to an existing file.
+        self.validator = validator
+        self.logger = logging.getLogger(__name__)
+
+    def _construct_modification_prompt(self, target_file: str, modification_instruction: str, language: LanguageEnum, include_related_files: bool) -> str:
+        """Construct a prompt for modifying an existing file.
         
         Args:
             target_file: Path to the file to modify
-            modification_spec: Specification of the required modification
+            modification_instruction: Specification of the required modification
+            language: Programming language of the target file
             include_related_files: Whether to include related files as context
-            
+
         Returns:
-            Modified version of the target file
+            A string prompt for the modification request.
         """
         # Get the content of the target file
         target_content = self.codebase.get_file_content(target_file)
-        
+
         # Construct the prompt
         prompt = f"You are tasked with modifying the following file:\n\n"
         prompt += f"File: {target_file}\n\n"
         prompt += f"```{language}\n{target_content}\n```\n\n"
-        
+
         # Add related files as context if requested
         if include_related_files:
             related_files = self.codebase.find_related_files(target_file, language)
@@ -492,12 +489,47 @@ class CodeModificationService:
                     if len(rel_content) > 1000:
                         rel_content = rel_content[:1000] + "\n# ... (file continues)"
                     prompt += f"File: {rel_file}\n```{language}\n{rel_content}\n```\n\n"
-        
+
         # Add the modification specification
         prompt += f"Modification Required:\n{modification_instruction}\n\n"
-        prompt += "Please provide the complete modified version of the target file only. " 
+        prompt += "Please provide the complete modified version of the target file only. "
         prompt += "Maintain the same style, imports, and formatting as the original code. "
         prompt += "Add comments explaining your changes."
+
+        return prompt
+
+    async def generate_modification(
+        self,
+        language: LanguageEnum,
+        target_file: str,
+        modification_instruction: str,
+        include_related_files: bool = True,
+        skip_validation: bool = False
+    ) -> CodeGenerationResult:
+        """Generate a modification to an existing file.
+        
+        Args:
+            language: Programming language of the target file
+            target_file: Path to the file to modify
+            modification_instruction: Instruction of the required modification
+            include_related_files: Whether to include related files as context
+            skip_validation: Whether to skip validation of the modified code
+        Returns:
+            Modified version of the target file
+        """
+        # Validate inputs
+        if not LanguageEnum.is_valid(language):
+            raise ValueError(f"Unsupported language: {language}")
+        if not os.path.exists(os.path.join(self.codebase.root_dir, target_file)):
+            raise FileNotFoundError(f"Target file {target_file} does not exist in the codebase.")
+        
+        # Construct the modification prompt
+        prompt = self._construct_modification_prompt(
+            target_file=target_file,
+            modification_instruction=modification_instruction,
+            language=language,
+            include_related_files=include_related_files
+        )
         
         # Generate the modified code
         specification = CodeGenerationSpecification(
@@ -516,11 +548,25 @@ class CodeModificationService:
             temperature=0.2
         )
 
-        modified_code = await self.llm.generate_code(request)
-        
-        # Extract the code if it's wrapped in markdown
-        return self._extract_code_from_markdown(modified_code, language)
-    
+        try:
+            modified_code = await self.llm.generate_code(request)
+            
+            # Extract the code if it's wrapped in markdown
+            code = self._extract_code_from_markdown(modified_code, language)
+
+            # Validate the modified code if a validator is available
+            validation_results = None
+            if self.validator and not skip_validation:
+                validation_results = await self.validator.validate(code, language)
+
+            return CodeGenerationResult(
+                code=code,
+                validation_results=validation_results
+            )
+        except Exception as e:
+            self.logger.error(f"Error generating modification: {str(e)}")
+            raise
+
     def _extract_code_from_markdown(self, text: str, language: LanguageEnum) -> str:
         """Extract code from markdown code blocks."""
         if f"```{language}" in text:
@@ -555,7 +601,13 @@ class CodeModificationService:
         
         # If the file is small enough, use the standard approach
         if len(target_content) <= max_chunk_size:
-            return await self.generate_modification(language, target_file, modification_instruction)
+            modified_result = await self.generate_modification(
+                language, 
+                target_file, 
+                modification_instruction,
+                skip_validation=True
+            ) # Skip validation because we are handling large files differently (by sections)
+            return modified_result.code
 
         # For larger files, we need a different strategy
         # First, try to identify the relevant sections
