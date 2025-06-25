@@ -253,6 +253,7 @@ class CodeModificationService:
                     sections[section_name] = section_content
         
         return sections
+    
     def _extract_section(self, content: str, section_name: str) -> str:
         """Extract a specific section from the content based on its name.
         
@@ -268,6 +269,7 @@ class CodeModificationService:
         pattern = re.compile(rf"def {section_name}\s*\(.*?\):.*?(?=\n\n|$)", re.DOTALL)
         match = pattern.search(content)
         return match.group(0) if match else ""
+    
     def _apply_section_modifications(
         self, 
         original_content: str, 
@@ -288,6 +290,6 @@ class CodeModificationService:
         # A real implementation would handle merging more intelligently
         for section_name, section_content in relevant_sections.items():
             # Replace the original section with the modified one
-            original_content = original_content.replace(section_content, section_name)
+            original_content = original_content.replace(section_content, modified_response)
         
         return original_content.strip()
