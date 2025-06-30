@@ -1,3 +1,4 @@
+#!/home/lbz/venv/bin/python3
 import abc
 import openai
 import logging
@@ -745,3 +746,65 @@ class CodeModificationService:
             original_content = original_content.replace(section_content, modified_section)
 
         return original_content.strip()
+    
+# Example usage:
+BASE_URL = "https://ai.stdev.remoteblossom.com/engines/v1"
+MODEL = "ai/phi4"
+KEY = "IGNORED"
+llm = OpenAICodeGenerator(api_key=KEY, model=MODEL, base_url=BASE_URL)
+validator = CodeValidator()
+service = CodeGenerationService(llm_interface=llm, validator=validator)
+
+def multiline_input(prompt: str) -> str:
+    """Read multiline input from the user."""
+    print(prompt)
+    lines = []
+    while True:
+        try:
+            line = input()
+            if line.strip() == "":
+                break
+            lines.append(line)
+        except EOFError:
+            break
+        except KeyboardInterrupt:
+            print("\nExiting multiline input.")
+            break
+    return "\n".join(lines)
+
+def input_to_specification(input: str) -> CodeGenerationSpecification:
+    """Convert input string (json format) to CodeGenerationSpecification."""
+    return CodeGenerationSpecification.model_validate_json(input)
+
+async def generate(input: str) -> str:
+    """Generate code from prompt."""
+    specification = input_to_specification(input)
+    request = CodeGenerationRequest(
+        specification=specification,
+        examples=[],
+        max_tokens=2000,
+        temperature=0.2
+    )
+    res = await service.generate_code(request)
+    code, validation_results = res.code, res.validation_results
+    validation_str = f"------- [Validation] -------\n{validation_results if validation_results else 'Not available'}"
+    code_str = f"------- [Code] -------\n{code}"
+    return f"{validation_str}\n{code_str}"
+
+if __name__ == "__main__":
+    while True:
+        try:
+            # Read multiline input from the user
+            input_str = multiline_input("Enter the code generation specification in JSON format (newline to finish):")
+            if not input_str.strip():
+                print("No input provided.")
+                continue
+            # Run the async generate function
+            result = asyncio.run(generate(input_str))
+            print(result)
+        except EOFError:
+            print("\nExiting dependency service.")
+            break
+        except KeyboardInterrupt:
+            print("\nExiting dependency service.")
+            break
