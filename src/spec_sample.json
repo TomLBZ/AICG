@@ -1,0 +1,14 @@
+{
+    "task_description": "find the nth fibonacci number",
+    "language": "python",
+    "framework": null,
+    "expected_inputs": {
+        "n": "The position in the Fibonacci sequence to retrieve"
+    },
+    "expected_outputs": {
+        "f": "The nth Fibonacci number"
+    },
+    "constraints": [
+        "Be as short as possible"
+    ]
+}

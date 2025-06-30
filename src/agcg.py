@@ -767,10 +767,9 @@ def multiline_input(prompt: str, verbose: bool = False) -> str:
                 break
             lines.append(line)
         except EOFError:
-            break
+            raise
         except KeyboardInterrupt:
-            print("[Command]\nExiting multiline input.")
-            break
+            raise
     return "\n".join(lines)
 
 def input_to_specification(input: str) -> CodeGenerationSpecification:
