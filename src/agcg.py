@@ -755,9 +755,10 @@ llm = OpenAICodeGenerator(api_key=KEY, model=MODEL, base_url=BASE_URL)
 validator = CodeValidator()
 service = CodeGenerationService(llm_interface=llm, validator=validator)
 
-def multiline_input(prompt: str) -> str:
+def multiline_input(prompt: str, verbose: bool = False) -> str:
     """Read multiline input from the user."""
-    print(prompt)
+    if (verbose):
+        print(prompt)
     lines = []
     while True:
         try:
@@ -768,7 +769,7 @@ def multiline_input(prompt: str) -> str:
         except EOFError:
             break
         except KeyboardInterrupt:
-            print("\nExiting multiline input.")
+            print("[Command]\nExiting multiline input.")
             break
     return "\n".join(lines)
 
@@ -787,24 +788,29 @@ async def generate(input: str) -> str:
     )
     res = await service.generate_code(request)
     code, validation_results = res.code, res.validation_results
-    validation_str = f"------- [Validation] -------\n{validation_results if validation_results else 'Not available'}"
-    code_str = f"------- [Code] -------\n{code}"
-    return f"{validation_str}\n{code_str}"
+    if not code:
+        return "[Error]\nNo code generated."
+    if not validation_results:
+        return "[Error]\nNo validation results available."
+    if validation_results.valid:
+        return f"[Code]\n{code}"
+    return f"[Error]\n{validation_results.message}"
 
 if __name__ == "__main__":
     while True:
         try:
             # Read multiline input from the user
-            input_str = multiline_input("Enter the code generation specification in JSON format (newline to finish):")
+            input_prompt = "Enter the code generation specification in JSON format (finish with an empty line):"
+            input_str = multiline_input(input_prompt, verbose=False)
             if not input_str.strip():
-                print("No input provided.")
+                print("[Error]\nNo input provided.")
                 continue
             # Run the async generate function
             result = asyncio.run(generate(input_str))
             print(result)
         except EOFError:
-            print("\nExiting dependency service.")
+            print("[Command]\nExiting dependency service.")
             break
         except KeyboardInterrupt:
-            print("\nExiting dependency service.")
+            print("[Command]\nExiting dependency service.")
             break
