@@ -792,7 +792,7 @@ async def generate(input: str) -> str:
     if not validation_results:
         return "[Error]\nNo validation results available."
     if validation_results.valid:
-        return f"[Code]\n{code}"
+        return code
     return f"[Error]\n{validation_results.message}"
 
 if __name__ == "__main__":
