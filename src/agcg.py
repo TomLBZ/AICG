@@ -763,7 +763,7 @@ def multiline_input(prompt: str, verbose: bool = False) -> str:
     while True:
         try:
             line = input()
-            if line.strip() == "":
+            if line.strip() == "\x04": # ASCII End of Transmission (EOT)
                 break
             lines.append(line)
         except EOFError:
@@ -799,7 +799,7 @@ if __name__ == "__main__":
     while True:
         try:
             # Read multiline input from the user
-            input_prompt = "Enter the code generation specification in JSON format (finish with an empty line):"
+            input_prompt = "Enter the code generation specification in JSON format (end with EOT 0x04):"
             input_str = multiline_input(input_prompt, verbose=False)
             if not input_str.strip():
                 print("[Error]\nNo input provided.")
