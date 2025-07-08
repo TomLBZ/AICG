@@ -2,3 +2,4 @@ venv/
 src/__pycache__/
 src/generated*
 src/modified*
+src/spec_test.json

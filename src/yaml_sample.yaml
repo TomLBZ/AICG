@@ -1,0 +1,34 @@
+x-code-generation:
+  language: python
+  framework: null
+  expected_inputs:
+    robot_id: A string that is the ID of the robot.
+  expected_outputs:
+    position: A dictionary with 'x', 'y', 'z' coordinates representing the robot's position in ROS 2 format.
+  task_description: |
+    Retrieves the current position of a robot by mapping to the external drone position API.
+    Requires conversion from lat/lon/height to ROS 2 X/Y/Z.
+    
+    Python bridge function signature:
+    def get_robot_position(robot_id: str) -> dict:
+        # Example API call
+        # import requests
+        # external_url = f"https://api.example.com/v1/drone/{robot_id}/pos"
+        # response = requests.get(external_url)
+        # response.raise_for_status()
+        # external_data = response.json()
+        # lat, lon, height = external_data.get("lat"), external_data.get("lon"), external_data.get("height")
+        
+        # # Placeholder for actual transformation logic
+        # internal_x = ...
+        # internal_y = ...
+        # internal_z = height # Assuming a direct mapping for height/altitude
+        # return {"x": internal_x, "y": internal_y, "z": internal_z}
+        pass
+    
+    Error handling:
+    - 404 Robot Not Found: Maps to external 404 Drone Not Found.
+    - External 500 Unknown Error should be mapped to a generic internal error.
+  constraints:
+    - Code must contain only one single function, no helper functions allowed
+    - All placeholders or TODO comments must be replaced with actual code
