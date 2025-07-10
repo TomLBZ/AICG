@@ -25,10 +25,6 @@ x-code-generation:
         # internal_z = height # Assuming a direct mapping for height/altitude
         # return {"x": internal_x, "y": internal_y, "z": internal_z}
         pass
-    
-    Error handling:
-    - 404 Robot Not Found: Maps to external 404 Drone Not Found.
-    - External 500 Unknown Error should be mapped to a generic internal error.
   constraints:
     - Code must contain only one single function, no helper functions allowed
     - All placeholders or TODO comments must be replaced with actual code
