@@ -9,9 +9,9 @@ x-code-generation:
     Retrieves the current position of a robot by mapping to the external drone position API.
     Requires conversion from lat/lon/height to ROS 2 X/Y/Z.
     
-    Python bridge function signature:
+    Function signature:
     def get_robot_position(robot_id: str) -> dict:
-        # Example API call
+        ## Example API call
         # import requests
         # external_url = f"https://api.example.com/v1/drone/{robot_id}/pos"
         # response = requests.get(external_url)
@@ -19,7 +19,7 @@ x-code-generation:
         # external_data = response.json()
         # lat, lon, height = external_data.get("lat"), external_data.get("lon"), external_data.get("height")
         
-        # # Placeholder for actual transformation logic
+        ## Placeholder for actual transformation logic
         # internal_x = ...
         # internal_y = ...
         # internal_z = height # Assuming a direct mapping for height/altitude
