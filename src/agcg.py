@@ -26,6 +26,30 @@ class LanguageEnum(StrEnum):
         """Check if the value is a valid language."""
         return value in cls._value2member_map_
 
+class SpecificationBasicContraintEnum(StrEnum):
+    """Enumeration for basic constraints in code generation."""
+    NO_ASSUMED_CODE = auto()
+    REPLACE_PLACEHOLDERS = auto()
+    STANDALONE_FUNCTION = auto()
+
+    @classmethod
+    def is_valid(cls, value: str) -> bool:
+        """Check if the value is a valid constraint."""
+        return value in cls._value2member_map_
+       
+    @classmethod
+    def get_constraint(cls, value: str) -> str:
+        """Get the constraint enum member from a string."""
+        if value in cls._value2member_map_:
+            cv = cls(value)
+            if cv == cls.NO_ASSUMED_CODE:
+                return "No helper functions or custom libraries should be assumed."
+            elif cv == cls.REPLACE_PLACEHOLDERS:
+                return "All placeholders (i.e., TODO comments or ellipses) must be replaced with actual code."
+            elif cv == cls.STANDALONE_FUNCTION:
+                return "The generated code must be one complete, standalone function."
+        return value  # Return the original value if not a basic constraint
+
 class CodeGenerationSpecification(BaseModel):
     """Model for code generation specifications."""
     task_description: str = Field(..., description="High-level description of what the code should do")
@@ -49,14 +73,14 @@ class CodeGenerationSpecification(BaseModel):
 
     def __str__(self) -> str:
         """Structured string representation of the specification."""
-        prompt = f"# Task: {self.task_description}\n\n"
-        prompt += f"## Language: {self.language}\n"
-        # Add function signature if specified
-        if self.function_signature:
-            prompt += f"## Function Signature: {self.function_signature}\n"
+        prompt = f"# Task: {self.task_description}\n"
+        prompt += f"\n## Language: {self.language}\n"
         # Add framework if specified
         if self.framework:
-            prompt += f"## Framework: {self.framework}\n"
+            prompt += f"\n## Framework: {self.framework}\n"
+        # Add function signature if specified
+        if self.function_signature:
+            prompt += f"\n## Function Signature:\n{self.function_signature}\n"
         # Add inputs (if length of inputs is 0, we don't add the section)
         if self.expected_inputs:
             prompt += "\n## Inputs:\n"
@@ -71,7 +95,8 @@ class CodeGenerationSpecification(BaseModel):
         if self.constraints:
             prompt += "\n## Constraints:\n"
             for constraint in self.constraints:
-                prompt += f"- {constraint}\n"
+                c = SpecificationBasicContraintEnum.get_constraint(constraint)
+                prompt += f"- {c}\n"
         return prompt
 
 class CodeGenerationExample(BaseModel):
