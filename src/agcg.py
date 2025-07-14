@@ -29,6 +29,7 @@ class LanguageEnum(StrEnum):
 class CodeGenerationSpecification(BaseModel):
     """Model for code generation specifications."""
     task_description: str = Field(..., description="High-level description of what the code should do")
+    function_signature: Optional[str] = Field(None, description="Optional function signature to base the code on")
     language: LanguageEnum = Field(..., description="Target programming language")
     framework: Optional[str] = Field(None, description="Optional framework to use (e.g., Django, Flask)")
     expected_inputs: Dict[str, str] = Field(..., description="Dictionary of input names and their descriptions")
@@ -39,6 +40,7 @@ class CodeGenerationSpecification(BaseModel):
         """String representation of the specification."""
         return (
             f"CodeGenerationSpecification(task_description={self.task_description}, "
+            f"function_signature={self.function_signature}, "
             f"language={self.language}, framework={self.framework}, "
             f"expected_inputs={self.expected_inputs}, "
             f"expected_outputs={self.expected_outputs}, "
@@ -48,8 +50,11 @@ class CodeGenerationSpecification(BaseModel):
     def __str__(self) -> str:
         """Structured string representation of the specification."""
         prompt = f"# Task: {self.task_description}\n\n"
-        # Add language and framework
         prompt += f"## Language: {self.language}\n"
+        # Add function signature if specified
+        if self.function_signature:
+            prompt += f"## Function Signature: {self.function_signature}\n"
+        # Add framework if specified
         if self.framework:
             prompt += f"## Framework: {self.framework}\n"
         # Add inputs (if length of inputs is 0, we don't add the section)
@@ -535,6 +540,7 @@ class CodeModificationService:
         # Generate the modified code
         specification = CodeGenerationSpecification(
             task_description=prompt,
+            function_signature=None,  # No specific function signature for modifications
             language=language,
             framework=None,
             expected_inputs={},
@@ -621,6 +627,7 @@ class CodeModificationService:
         
         sections_specification = CodeGenerationSpecification(
             task_description=prompt,
+            function_signature=None,  # No specific function signature for this task
             language=LanguageEnum.NONE,  # We're not generating code yet, just asking for sections
             framework=None,
             expected_inputs={},
@@ -655,6 +662,7 @@ class CodeModificationService:
         
         modification_specification = CodeGenerationSpecification(
             task_description=modification_prompt,
+            function_signature=None,  # No specific function signature for modifications
             language=language,
             framework=None,
             expected_inputs={},

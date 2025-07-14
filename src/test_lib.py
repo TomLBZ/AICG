@@ -42,6 +42,7 @@ async def complete_test():
     """Run a complete test of code generation and modification."""
     specification = CodeGenerationSpecification(
         task_description="Convert angles from degrees to radians.",
+        function_signature=None,
         language=LanguageEnum.PYTHON,
         framework=None,
         expected_inputs={"x": "float value in degrees"},

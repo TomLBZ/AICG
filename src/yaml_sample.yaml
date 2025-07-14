@@ -1,30 +1,45 @@
-x-code-generation:
-  language: python
-  framework: null
-  expected_inputs:
-    robot_id: A string that is the ID of the robot.
-  expected_outputs:
-    position: A dictionary with 'x', 'y', 'z' coordinates representing the robot's position in ROS 2 format.
-  task_description: |
-    Retrieves the current position of a robot by mapping to the external drone position API.
-    Requires conversion from lat/lon/height to ROS 2 X/Y/Z.
-    
-    Function signature:
-    def get_robot_position(robot_id: str) -> dict:
-        ## Example API call
-        # import requests
-        # external_url = f"https://api.example.com/v1/drone/{robot_id}/pos"
-        # response = requests.get(external_url)
-        # response.raise_for_status()
-        # external_data = response.json()
-        # lat, lon, height = external_data.get("lat"), external_data.get("lon"), external_data.get("height")
-        
-        ## Placeholder for actual transformation logic
-        # internal_x = ...
-        # internal_y = ...
-        # internal_z = height # Assuming a direct mapping for height/altitude
-        # return {"x": internal_x, "y": internal_y, "z": internal_z}
-        pass
-  constraints:
-    - Code must contain only one single function, no helper functions allowed
-    - All placeholders or TODO comments must be replaced with actual code
+      x-code-generation:
+        language: python
+        expected_inputs:
+          robotId: The ID of the robot.
+        expected_outputs:
+          position: A dictionary containing 'x', 'y', and 'z' coordinates 
+            representing the robot's position in ROS 2 frame.
+        task_description: |
+          Retrieves the current position of a specific robot from the external Drone Management API's
+          position endpoint. The external API returns latitude, longitude, and height, which must be
+          transformed into the internal ROS 2 coordinate frame (X=forward, Y=left, Z=up).
+          A simplified placeholder conversion is used; a full implementation requires a proper geodetic
+          to Cartesian projection.
+        function_signature: |
+          def get_robot_position(robotId: str) -> dict:
+              import requests
+              EXTERNAL_API_BASE_URL = "https://api.example.com/v1"
+              url = f"{EXTERNAL_API_BASE_URL}/drone/{robotId}/pos"
+              response = requests.get(url)
+              response.raise_for_status()
+              external_data = response.json()
+
+              lat = external_data.get('lat')
+              lon = external_data.get('lon')
+              height = external_data.get('height')
+
+              # TODO: Implement accurate geodetic (lat/lon/height) to ROS 2 (X/Y/Z) conversion.
+              # This is a placeholder for demonstration. Actual conversion depends on reference frame,
+              # projection, and origin definition.
+              # Assuming a flat-earth approximation for small distances, or a local ENU frame.
+              # For a proper solution, consider libraries like pyproj or geographiclib,
+              # and define a local origin for the ROS 2 frame.
+              
+              # Example placeholder:
+              x_pos = lon # Simplified mapping, requires proper conversion
+              y_pos = lat # Simplified mapping, requires proper conversion
+              z_pos = height # Simplified mapping, requires proper conversion
+
+              return {'x': x_pos, 'y': y_pos, 'z': z_pos}
+        constraints:
+        - The generated code must be one complete, standalone function.
+        - No helper functions or custom libraries should be assumed.
+        - All placeholders (i.e., TODO comments or ellipses) must be replaced with actual code.
+        - Latitude/longitude to XYZ conversion requires custom projection logic,
+          which is a placeholder in the current code.
