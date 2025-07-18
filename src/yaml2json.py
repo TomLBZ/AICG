@@ -2,7 +2,6 @@
 import yaml
 import json
 import traceback
-import os
 
 def multiline_input(prompt: str, verbose: bool = False) -> str:
     """Read multiline input from the user."""
@@ -43,15 +42,6 @@ def yaml_to_json(yaml_file, json_file):
         json.dump(yaml_content["x-code-generation"], jf, indent=4)
 
 if __name__ == "__main__":
-    # yaml_file = 'yaml_sample.yaml'
-    # json_file = 'spec_test.json'
-    
-    # if os.path.exists(yaml_file):
-    #     yaml_to_json(yaml_file, json_file)
-    #     print(f"Converted {yaml_file} to {json_file}")
-    # else:
-    #     print(f"{yaml_file} does not exist.")
-    #     print("Please ensure the YAML file is present in the specified path.")
     while True:
         try:
             input_prompt = "Enter the yaml content (end with EOT 0x04):"
