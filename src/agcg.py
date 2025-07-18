@@ -8,11 +8,18 @@ import ast
 import re
 import os
 import glob
+import yaml
+import json
 
 from enum import StrEnum, auto
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Any, Callable
 from tenacity import retry, stop_after_attempt, wait_exponential
 from pydantic import BaseModel, Field
+
+type YamlObject = Dict[str, Any]
+type ExtractorFunction = Callable[[YamlObject], List[CodeGenerationSpecification]]
+
+### Classes ###
 
 class LanguageEnum(StrEnum):
     """Enumeration for supported programming languages."""
@@ -122,7 +129,10 @@ class CodeValidationResult(BaseModel):
     
     def __str__(self) -> str:
         """Structured string representation of the validation result."""
-        return f"Validation Result: {'Valid' if self.valid else 'Invalid'}\nMessage: {self.message if self.message else 'None'}"
+        if self.message:
+            return self.message
+        else:
+            return "Valid (No Message)" if self.valid else "Invalid (No Message)"
 
 class CodeGenerationResult(BaseModel):
     """Model for code generation results."""
@@ -297,12 +307,12 @@ class CodeValidator:
                 return results
         
         # Create a temporary file
-        with open("temp_code.py", "w") as f:
+        with open("tmp/to_validate.py", "w") as f:
             f.write(code)
         
         # Check syntax
         process = await asyncio.create_subprocess_shell(
-            "python -m py_compile temp_code.py",
+            "python -m py_compile tmp/to_validate.py",
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
         )
@@ -317,7 +327,7 @@ class CodeValidator:
             results.message = f"Syntax error: {error_message}"
 
         # Clean up
-        subprocess.run(["rm", "temp_code.py"])
+        subprocess.run(["rm", "tmp/to_validate.py"])
         
         return results
     
@@ -780,69 +790,151 @@ class CodeModificationService:
 
         return original_content.strip()
     
-# Example usage:
-BASE_URL = "https://ai.stdev.remoteblossom.com/engines/v1"
-MODEL = "ai/phi4"
-KEY = "IGNORED"
-llm = OpenAICodeGenerator(api_key=KEY, model=MODEL, base_url=BASE_URL)
-validator = CodeValidator()
-service = CodeGenerationService(llm_interface=llm, validator=validator)
+class YamlInputReader:
+    """Utility for reading and processing user input."""
+    
+    def __init__(self, extractor: ExtractorFunction, prompt: str = "Enter your input: "):
+        """Initialize with a prompt.
+        
+        Args:
+            extractor: Function to convert input yaml object to a list of specifications
+            prompt: The prompt to display to the user
+        """
+        self.extractor = extractor
+        self.prompt = prompt
+    
+    def read_input(self, prompt: str = "") -> str:
+        """Read input from the user."""
+        localPrompt = prompt if prompt else self.prompt
+        return input(localPrompt).strip()
 
-def multiline_input(prompt: str, verbose: bool = False) -> str:
-    """Read multiline input from the user."""
-    if (verbose):
-        print(prompt)
-    lines = []
-    while True:
+    def read_multiline_input(self, prompt: str = "", verbose: bool = False) -> str:
+        """Read multiline input from the user."""
+        localPrompt = prompt if prompt else self.prompt
+        if (verbose):
+            print(localPrompt)
+        lines = []
+        while True:
+            try:
+                line = input()
+                if line.strip() == "\x04": # ASCII End of Transmission (EOT)
+                    break
+                lines.append(line)
+            except EOFError:
+                raise
+            except KeyboardInterrupt:
+                raise
+        return "\n".join(lines)
+
+    def get_yaml_object_from_string(self, yaml_string: str) -> YamlObject:
+        """Parse YAML content from a string."""
         try:
-            line = input()
-            if line.strip() == "\x04": # ASCII End of Transmission (EOT)
-                break
-            lines.append(line)
-        except EOFError:
-            raise
-        except KeyboardInterrupt:
-            raise
-    return "\n".join(lines)
+            return yaml.safe_load(yaml_string)
+        except yaml.YAMLError as e:
+            raise ValueError(f"YAML parsing error: {e}")
+        
+    def get_yaml_object_from_input(self, prompt: str = "", verbose: bool = False) -> YamlObject:
+        """Read YAML content from user input."""
+        input_str = self.read_multiline_input(prompt, verbose)
+        if not input_str.strip():
+            raise ValueError("No input provided.")
+        return self.get_yaml_object_from_string(input_str)
 
-def input_to_specification(input: str) -> CodeGenerationSpecification:
-    """Convert input string (json format) to CodeGenerationSpecification."""
-    return CodeGenerationSpecification.model_validate_json(input)
+    def get_yaml_object_from_file(self, yaml_file: str) -> YamlObject:
+        """Read the content of a YAML file."""
+        with open(yaml_file, 'r') as file:
+            return yaml.safe_load(file)
+        
+    def yaml_object_to_specifications(self, yaml_object: YamlObject) -> List[CodeGenerationSpecification]:
+        """Convert a YAML object to a list of CodeGenerationSpecifications."""
+        if not isinstance(yaml_object, dict):
+            raise TypeError("Expected a dictionary for YAML object.")
+        return self.extractor(yaml_object)
 
-async def generate(input: str) -> str:
-    """Generate code from prompt."""
-    specification = input_to_specification(input)
+### Example usage: ###
+
+# Helper Functions
+def preprocess_yaml_objects(yaml_object: YamlObject) -> List[CodeGenerationSpecification]:
+    """Process the YAML object to extract relevant information."""
+    def find_x_code_generation(obj: YamlObject) -> Optional[YamlObject]:
+        if isinstance(obj, dict):
+            if "x-code-generation" in obj:
+                return obj["x-code-generation"]
+            for _, value in obj.items():
+                result = find_x_code_generation(value)
+                if result is not None:
+                    return result
+        elif isinstance(obj, list):
+            for item in obj:
+                result = find_x_code_generation(item)
+                if result is not None:
+                    return result
+        return None
+    paths = yaml_object.get("paths", {})
+    if not paths:
+        raise KeyError("The YAML object does not contain 'paths' key.")
+    keys_in_paths = list(paths.keys())
+    if not keys_in_paths:
+        raise KeyError("The 'paths' key in the YAML object is empty.")
+    specifications = []
+    for key in keys_in_paths:
+        if not isinstance(paths[key], dict):
+            raise TypeError(f"Expected a dictionary for path '{key}', got {type(paths[key])}.")
+        value = paths[key]
+        x_code_generation = find_x_code_generation(value)
+        if x_code_generation is not None:
+            json_specification = json.dumps(x_code_generation, indent=4)
+            specifications.append(CodeGenerationSpecification.model_validate_json(json_specification))
+    return specifications
+
+def generate_one_function(specification: CodeGenerationSpecification) -> CodeGenerationResult:
+    """Generate function code from the specification."""
     request = CodeGenerationRequest(
         specification=specification,
         examples=[],
         max_tokens=2000,
         temperature=0.2
     )
-    res = await service.generate_code(request)
-    code, validation_results = res.code, res.validation_results
-    if not code:
-        return "[Error]\nNo code generated."
-    if not validation_results:
-        return "[Error]\nNo validation results available."
-    if validation_results.valid:
-        return code
-    return f"[Error]\n{validation_results.message}"
+    response = asyncio.run(service.generate_code(request))
+    return response
 
+# Variables
+BASE_URL = "https://ai.stdev.remoteblossom.com/engines/v1"
+MODEL = "ai/phi4"
+KEY = "IGNORED"
+llm = OpenAICodeGenerator(api_key=KEY, model=MODEL, base_url=BASE_URL)
+validator = CodeValidator()
+service = CodeGenerationService(llm_interface=llm, validator=validator)
+yreader = YamlInputReader(extractor=preprocess_yaml_objects, prompt="Enter the code generation specification in yaml format (end with EOT 0x04):")
+
+# Main Execution Loop
 if __name__ == "__main__":
     while True:
         try:
-            # Read multiline input from the user
-            input_prompt = "Enter the code generation specification in JSON format (end with EOT 0x04):"
-            input_str = multiline_input(input_prompt, verbose=False)
-            if not input_str.strip():
-                print("[Error]\nNo input provided.")
-                continue
-            # Run the async generate function
-            result = asyncio.run(generate(input_str))
-            print(result)
+            yaml_object = yreader.get_yaml_object_from_input()
+            specifications = yreader.yaml_object_to_specifications(yaml_object)
+            print(f"### Processed {len(specifications)} specifications from the YAML file. ###")
+            for spec in specifications:
+                res = generate_one_function(spec)
+                code, validation_results = res.code, res.validation_results
+                if not code:
+                    raise ValueError(f"Code generation incomplete.")
+                print(f"\n### Validation results: {validation_results} ###\n### Generated code: ###\n{code}")
         except EOFError:
-            print("[Command]\nExiting dependency service.")
+            print("[Command] Exiting dependency service.")
             break
         except KeyboardInterrupt:
-            print("[Command]\nExiting dependency service.")
+            print("[Command] Exiting dependency service.")
             break
+        except KeyError as e:
+            print(f"[Error] Key Error: {e}")
+        except FileNotFoundError:
+            print(f"[Error] The file specified does not exist.")
+        except yaml.YAMLError as e:
+            print(f"[Error] YAML Parsing Error: {e}")
+        except ValueError as e:
+            print(f"[Error] Value Error: {e}")
+        except TypeError as e:
+            print(f"[Error] Type Error: {e}")
+        except Exception as e:
+            print(f"[Error] Unexpected Error: {e}")
