@@ -55,8 +55,8 @@ async def complete_test():
         max_tokens=2000,
         temperature=0.2
     )
-    gen_fname = "generated.py"
-    mod_fname = "modified.py"
+    gen_fname = "tmp/generated.py"
+    mod_fname = "tmp/modified.py"
     modification = "make the input have 3 parameters: x, y and z and convert all of them to radians, write comments to describe the parameters"
     print("[GENERATION] Starting...")
     code = await test_code_generation(request)
