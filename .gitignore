@@ -1,5 +1,4 @@
 venv/
 src/__pycache__/
-src/generated*
-src/modified*
+src/tmp/
 src/spec_test.json
