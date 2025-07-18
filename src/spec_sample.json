@@ -1,14 +1,16 @@
 {
-    "task_description": "find the nth fibonacci number",
     "language": "python",
-    "framework": null,
     "expected_inputs": {
-        "n": "The position in the Fibonacci sequence to retrieve"
+        "loco_client": "An initialized instance of LocoClient."
     },
     "expected_outputs": {
-        "f": "The nth Fibonacci number"
+        "result": "An integer representing the operation status (0 for success, non-zero for error)."
     },
+    "task_description": "Calls the `LocoClient.Init()` method to initialize the locomotion module of the robot. This function maps the internal `/robot/{robotid}/init` command to the external `LocoClient.Init` method. The `robotid` parameter is not used in the external SDK call.\n",
+    "function_signature": "def initialize_robot(loco_client: object) -> int:\n    # The robotid is not directly used by the LocoClient.Init method.\n    # Assuming loco_client is an initialized instance of unitree_sdk2py.g1.loco.g1_loco_client.LocoClient.\n    loco_client.Init() # SDK's Init method returns None\n    return 0 # Assuming success if no exception is raised\n",
     "constraints": [
-        "Be as short as possible"
+        "standalone_function",
+        "no_assumed_code",
+        "replace_placeholders"
     ]
 }

@@ -1,45 +1,19 @@
       x-code-generation:
         language: python
         expected_inputs:
-          robotId: The ID of the robot.
+          loco_client: An initialized instance of LocoClient.
         expected_outputs:
-          position: A dictionary containing 'x', 'y', and 'z' coordinates 
-            representing the robot's position in ROS 2 frame.
+          result: An integer representing the operation status (0 for success, 
+            non-zero for error).
         task_description: |
-          Retrieves the current position of a specific robot from the external Drone Management API's
-          position endpoint. The external API returns latitude, longitude, and height, which must be
-          transformed into the internal ROS 2 coordinate frame (X=forward, Y=left, Z=up).
-          A simplified placeholder conversion is used; a full implementation requires a proper geodetic
-          to Cartesian projection.
+          Calls the `LocoClient.Init()` method to initialize the locomotion module of the robot. This function maps the internal `/robot/{robotid}/init` command to the external `LocoClient.Init` method. The `robotid` parameter is not used in the external SDK call.
         function_signature: |
-          def get_robot_position(robotId: str) -> dict:
-              import requests
-              EXTERNAL_API_BASE_URL = "https://api.example.com/v1"
-              url = f"{EXTERNAL_API_BASE_URL}/drone/{robotId}/pos"
-              response = requests.get(url)
-              response.raise_for_status()
-              external_data = response.json()
-
-              lat = external_data.get('lat')
-              lon = external_data.get('lon')
-              height = external_data.get('height')
-
-              # TODO: Implement accurate geodetic (lat/lon/height) to ROS 2 (X/Y/Z) conversion.
-              # This is a placeholder for demonstration. Actual conversion depends on reference frame,
-              # projection, and origin definition.
-              # Assuming a flat-earth approximation for small distances, or a local ENU frame.
-              # For a proper solution, consider libraries like pyproj or geographiclib,
-              # and define a local origin for the ROS 2 frame.
-              
-              # Example placeholder:
-              x_pos = lon # Simplified mapping, requires proper conversion
-              y_pos = lat # Simplified mapping, requires proper conversion
-              z_pos = height # Simplified mapping, requires proper conversion
-
-              return {'x': x_pos, 'y': y_pos, 'z': z_pos}
+          def initialize_robot(loco_client: object) -> int:
+              # The robotid is not directly used by the LocoClient.Init method.
+              # Assuming loco_client is an initialized instance of unitree_sdk2py.g1.loco.g1_loco_client.LocoClient.
+              loco_client.Init() # SDK's Init method returns None
+              return 0 # Assuming success if no exception is raised
         constraints:
-        - The generated code must be one complete, standalone function.
-        - No helper functions or custom libraries should be assumed.
-        - All placeholders (i.e., TODO comments or ellipses) must be replaced with actual code.
-        - Latitude/longitude to XYZ conversion requires custom projection logic,
-          which is a placeholder in the current code.
+        - standalone_function
+        - no_assumed_code
+        - replace_placeholders
