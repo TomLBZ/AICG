@@ -3,6 +3,9 @@ AI Generic Code Generator
 
 This is a simple library / script that generates code based on structured instructions in yaml or json format, or based on specifications programmatically provided to it. It is written based on community articles and examples.
 
+### Usage with Alice
+Create a new *Service* on your Alice frontend, and upload the [agcg.py](agcg.py) script as the *Executable File* in *Service Mode*. You can then test the service using the Alice frontend or by sending requests to the service endpoint at the generated WebSocket URL.
+
 ### Usage as a Library
 
 See [test_lib.py](test_lib.py) for usage as a library.
