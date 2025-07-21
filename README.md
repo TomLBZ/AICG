@@ -1,13 +1,13 @@
 # AICG
 AI Generic Code Generator
 
-This is a simple library / script that generates code based on structured instructions in yaml or json format, or based on specifications programmatically provided to it.
+This is a simple library / script that generates code based on structured instructions in yaml or json format, or based on specifications programmatically provided to it. It is written based on community articles and examples.
 
-### Usage as a library
+### Usage as a Library
 
 See [test_lib.py](test_lib.py) for usage as a library.
 
-### Usage as a script
+### Usage as a Script
 Running the script directly depends on a correct OpenAI-Compatible API endpoint. Please open the [agcg.py](agcg.py) file and set the `BASE_URL` variable to point to your OpenAI-compatible API endpoint. For example:
 
 ```
