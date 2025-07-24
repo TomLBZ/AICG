@@ -38,6 +38,7 @@ class SpecificationBasicContraintEnum(StrEnum):
     NO_ASSUMED_CODE = auto()
     REPLACE_PLACEHOLDERS = auto()
     STANDALONE_FUNCTION = auto()
+    NO_CLASSES = auto()
 
     @classmethod
     def is_valid(cls, value: str) -> bool:
@@ -55,6 +56,8 @@ class SpecificationBasicContraintEnum(StrEnum):
                 return "All placeholders (i.e., TODO comments or ellipses) must be replaced with actual code."
             elif cv == cls.STANDALONE_FUNCTION:
                 return "The generated code must be one complete, standalone function."
+            elif cv == cls.NO_CLASSES:
+                return "The generated function will be injected into an existing codebase. Never define any new classes because all parameter classes are already defined in the codebase."
         return value  # Return the original value if not a basic constraint
 
 class CodeGenerationSpecification(BaseModel):
@@ -306,10 +309,12 @@ class CodeValidator:
                 results.message = f"Missing imports: {', '.join(missing_imports)}"
                 return results
         
-        # Create a temporary file
+        # Create a temporary file if not already present
+        if not os.path.exists("tmp"):
+            os.makedirs("tmp")
         with open("tmp/to_validate.py", "w") as f:
             f.write(code)
-        
+
         # Check syntax
         process = await asyncio.create_subprocess_shell(
             "python -m py_compile tmp/to_validate.py",
