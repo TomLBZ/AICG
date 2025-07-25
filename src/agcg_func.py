@@ -39,6 +39,7 @@ class SpecificationBasicContraintEnum(StrEnum):
     REPLACE_PLACEHOLDERS = auto()
     STANDALONE_FUNCTION = auto()
     NO_CLASSES = auto()
+    GLOBAL_CONTEXT = auto()
 
     @classmethod
     def is_valid(cls, value: str) -> bool:
@@ -51,13 +52,15 @@ class SpecificationBasicContraintEnum(StrEnum):
         if value in cls._value2member_map_:
             cv = cls(value)
             if cv == cls.NO_ASSUMED_CODE:
-                return "No helper functions or custom libraries should be assumed."
+                return "No helper functions or custom libraries should be assumed unless they are in the function signature."
             elif cv == cls.REPLACE_PLACEHOLDERS:
                 return "All placeholders (i.e., TODO comments or ellipses) must be replaced with actual code."
             elif cv == cls.STANDALONE_FUNCTION:
                 return "The generated code must be one complete, standalone function."
             elif cv == cls.NO_CLASSES:
-                return "The generated function will be injected into an existing codebase. Never define any new classes because all parameter classes are already defined in the codebase."
+                return "The generated function will be injected into an existing codebase. NEVER define any new classes because all parameter classes are already defined in the codebase."
+            elif cv == cls.GLOBAL_CONTEXT:
+                return "The undeclared variables, functions and classes used in the function signature (if any) are available in the context of the codebase and do not need to be defined or imported in the function body."
         return value  # Return the original value if not a basic constraint
 
 class CodeGenerationSpecification(BaseModel):
@@ -910,7 +913,7 @@ def generate_one_function(specification: CodeGenerationSpecification) -> CodeGen
         specification=specification,
         examples=[],
         max_tokens=2000,
-        temperature=0.2
+        temperature=0.0
     )
     response = asyncio.run(service.generate_code(request))
     return response
