@@ -878,7 +878,7 @@ def preprocess_yaml_objects(yaml_object: YamlObject) -> List[CodeGenerationSpeci
         return None
     def get_function_name_from_signature(sig: str) -> str:
         """Extract function name from a function signature."""
-        match = re.match(r"def\s+(\w+)\s*\(", sig)
+        match = re.match(r"(?:async\s+)?def\s+(\w+)\s*\(", sig)
         return match.group(1) if match else "unknown_function"
     paths = yaml_object.get("paths", {})
     if not paths:
