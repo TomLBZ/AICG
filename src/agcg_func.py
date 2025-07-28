@@ -882,7 +882,7 @@ def preprocess_yaml_objects(yaml_object: YamlObject) -> List[CodeGenerationSpeci
         if match:
             is_async = match.group(1) is not None
             func_name = match.group(2)
-            return f"async {func_name}" if is_async else func_name
+            return f"await {func_name}" if is_async else func_name
         return "unknown_function"
     paths = yaml_object.get("paths", {})
     if not paths:
