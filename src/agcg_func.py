@@ -878,8 +878,12 @@ def preprocess_yaml_objects(yaml_object: YamlObject) -> List[CodeGenerationSpeci
         return None
     def get_function_name_from_signature(sig: str) -> str:
         """Extract function name from a function signature."""
-        match = re.match(r"(?:async\s+)?def\s+(\w+)\s*\(", sig)
-        return match.group(1) if match else "unknown_function"
+        match = re.match(r"(async\s+)?def\s+(\w+)\s*\(", sig)
+        if match:
+            is_async = match.group(1) is not None
+            func_name = match.group(2)
+            return f"async {func_name}" if is_async else func_name
+        return "unknown_function"
     paths = yaml_object.get("paths", {})
     if not paths:
         raise KeyError("The YAML object does not contain 'paths' key.")
